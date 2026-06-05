@@ -17,6 +17,7 @@ Configure these variables in Vercel Project Settings for Production, Preview, an
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | Production PostgreSQL connection string. |
+| `DIRECT_URL` | Yes | Direct/session connection used by Prisma migrations. |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key. |
 | `CLERK_SECRET_KEY` | Yes | Clerk secret key. |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Yes | Use `/sign-in`. |
@@ -35,7 +36,18 @@ Before routing production traffic to a deployment, apply Prisma migrations again
 npm run db:migrate:deploy
 ```
 
-For Vercel deployments, run this command from a trusted local machine or CI job that has the production `DATABASE_URL`.
+For Vercel deployments, run this command from a trusted local machine or CI job that has the production `DATABASE_URL` and `DIRECT_URL`.
+
+## Supabase Postgres Connection Strings
+
+Use Supabase's connection pooler strings for Vercel:
+
+```bash
+DATABASE_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:5432/postgres"
+```
+
+Use the transaction pooler on port `6543` for runtime traffic and the session/direct connection on port `5432` for Prisma migrations.
 
 ## Vercel Build Settings
 

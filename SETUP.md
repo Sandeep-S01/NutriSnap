@@ -32,7 +32,8 @@ Copy-Item .env.example .env.local
 Set these values in `.env.local`:
 
 ```bash
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
+DATABASE_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:5432/postgres"
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 CLERK_SECRET_KEY="sk_test_..."
 NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
@@ -77,5 +78,6 @@ This runs linting and a production build.
 ## Notes
 
 - Protected dashboard and analytics pages require `DATABASE_URL`.
+- Prisma migrations require `DIRECT_URL`.
 - Upload and analysis require valid Clerk, Vercel Blob, and OpenAI credentials.
 - The app uses an in-memory rate limiter. It is suitable for MVP hardening but resets between serverless instances.

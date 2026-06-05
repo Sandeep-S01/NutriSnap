@@ -150,6 +150,7 @@ Phase 9 is complete.
 ## Phase 9 Notes
 
 - Added Vercel deployment configuration.
+- Added Prisma `DIRECT_URL` support for Supabase migration/admin connections.
 - Added deployment-focused npm scripts for Prisma generation, migration deploy, local migration, Studio, and preflight checks.
 - Replaced the default Next.js README with NutriSnap project documentation.
 - Added local setup guide.

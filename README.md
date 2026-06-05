@@ -48,6 +48,7 @@ npm run deploy:preflight
 Copy `.env.example` to `.env.local` for local development and configure the same required variables in Vercel:
 
 - `DATABASE_URL`
+- `DIRECT_URL`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 - `NEXT_PUBLIC_CLERK_SIGN_IN_URL`
