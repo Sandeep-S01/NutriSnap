@@ -1,16 +1,31 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-const isProtectedRoute = createRouteMatcher([
+const isProtectedPageRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/upload(.*)",
   "/analytics(.*)",
   "/profile(.*)",
+]);
+
+const isProtectedApiRoute = createRouteMatcher([
   "/api(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-  if (isProtectedRoute(request)) {
+  if (isProtectedApiRoute(request)) {
     await auth.protect();
+  }
+
+  if (isProtectedPageRoute(request)) {
+    const { userId } = await auth();
+
+    if (!userId) {
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("redirect_url", request.nextUrl.href);
+
+      return NextResponse.redirect(signInUrl);
+    }
   }
 });
 
