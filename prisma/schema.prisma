@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Meal {
+  id                   String   @id @default(cuid())
+  clerkUserId          String
+  imageUrl             String
+  foodName             String
+  estimatedWeightGrams Float
+  calories             Float
+  protein              Float
+  carbs                Float
+  fat                  Float
+  fiber                Float
+  confidence           Float
+  vitamins             Json
+  aiRawResponse        Json
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([clerkUserId, createdAt])
+}
