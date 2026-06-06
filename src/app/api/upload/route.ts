@@ -19,20 +19,10 @@ function isValidUploadPathname(pathname: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json(
-      { status: "error", message: "Unauthorized" },
-      { status: 401 },
-    );
-  }
-
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
   if (!blobToken?.startsWith("vercel_blob_rw_")) {
     appLogger.error("Blob upload token is missing or invalid", new Error("Invalid Blob token"), {
-      userId,
       hasToken: Boolean(blobToken),
     });
 
@@ -52,6 +42,12 @@ export async function POST(request: NextRequest) {
       body,
       token: blobToken,
       onBeforeGenerateToken: async (pathname) => {
+        const { userId } = await auth();
+
+        if (!userId) {
+          throw new Error("Unauthorized upload token request.");
+        }
+
         if (!isValidUploadPathname(pathname)) {
           throw new Error("Invalid upload pathname.");
         }
@@ -63,11 +59,17 @@ export async function POST(request: NextRequest) {
           tokenPayload: JSON.stringify({ userId }),
         };
       },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        appLogger.info("Blob client upload completed", {
+          pathname: blob.pathname,
+          hasTokenPayload: Boolean(tokenPayload),
+        });
+      },
     });
 
     return NextResponse.json(response);
   } catch (error) {
-    appLogger.error("Blob client upload token request failed", error, { userId });
+    appLogger.error("Blob client upload request failed", error);
 
     return NextResponse.json(
       {

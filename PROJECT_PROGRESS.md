@@ -166,3 +166,10 @@ Phase 9 is complete.
 ## Next Step
 
 All planned MVP phases are complete.
+
+## Post-Deployment Fixes
+
+- Verified the production Blob upload issue was not caused by token shape or public-store access.
+- Updated `/api/upload` so Clerk authentication is required only while generating a browser upload token.
+- Allowed Vercel Blob upload-completed callbacks to reach `handleUpload` without Clerk browser cookies.
+- Narrowed middleware API protection to meal API routes so the Blob upload route can handle both authenticated browser token requests and Vercel Blob callbacks.

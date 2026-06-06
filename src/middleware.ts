@@ -9,7 +9,7 @@ const isProtectedPageRoute = createRouteMatcher([
 ]);
 
 const isProtectedApiRoute = createRouteMatcher([
-  "/api(.*)",
+  "/api/meals(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
