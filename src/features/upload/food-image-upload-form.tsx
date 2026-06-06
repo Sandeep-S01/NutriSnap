@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useRef, useState, useTransition } from "react";
 import { upload } from "@vercel/blob/client";
 import { analyzeFoodImage } from "@/actions/analyze-food-image";
 import { FoodAnalysisResultCard } from "@/features/analysis/food-analysis-result";
+import { MobileFoodAnalysisResult } from "@/features/analysis/mobile-food-analysis-result";
 import { SaveMealButton } from "@/features/meals/save-meal-button";
 import {
   ACCEPTED_IMAGE_EXTENSIONS,
@@ -202,8 +203,30 @@ export function FoodImageUploadForm() {
     });
   }
 
+  const hasCompletedMobileAnalysis =
+    analysisState.status === "success" &&
+    Boolean(analysisState.analysis) &&
+    Boolean(state.image?.url);
+
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_0.85fr]">
+    <>
+      {hasCompletedMobileAnalysis &&
+      analysisState.analysis &&
+      state.image?.url ? (
+        <MobileFoodAnalysisResult
+          analysis={analysisState.analysis}
+          imageUrl={state.image.url}
+          rawResponse={analysisState.rawResponse ?? analysisState.analysis}
+          onBack={clearSelection}
+        />
+      ) : null}
+
+      <div
+        className={[
+          "grid gap-5 lg:grid-cols-[1fr_0.85fr]",
+          hasCompletedMobileAnalysis ? "hidden lg:grid" : "",
+        ].join(" ")}
+      >
       <form
         onSubmit={handleSubmit}
         className="rounded-lg border border-slate-200 bg-white p-5"
@@ -392,6 +415,7 @@ export function FoodImageUploadForm() {
           </>
         ) : null}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

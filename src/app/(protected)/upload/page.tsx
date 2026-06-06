@@ -2,8 +2,8 @@ import { FoodImageUploadForm } from "@/features/upload/food-image-upload-form";
 
 export default function UploadPage() {
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 lg:px-10">
-      <section className="mb-8">
+    <main className="mx-auto w-full max-w-6xl px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
+      <section className="mb-8 lg:mb-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
           Food upload
         </p>

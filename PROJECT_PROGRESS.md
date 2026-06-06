@@ -173,3 +173,11 @@ All planned MVP phases are complete.
 - Updated `/api/upload` so Clerk authentication is required only while generating a browser upload token.
 - Allowed Vercel Blob upload-completed callbacks to reach `handleUpload` without Clerk browser cookies.
 - Narrowed middleware API protection to meal API routes so the Blob upload route can handle both authenticated browser token requests and Vercel Blob callbacks.
+
+## Mobile Design Pass
+
+- Added a mobile-only bottom navigation for protected routes.
+- Converted the protected desktop header to desktop-only so mobile has app-style navigation.
+- Added a mobile nutritional analysis screen for successful food scans with hero image, confidence overlay, total calories, macro cards, micronutrient rows, and a full-width log meal action.
+- Kept the existing desktop upload and analysis layout unchanged.
+- Moved the Clerk profile route to `/profile/[[...rest]]` so Clerk account subroutes work correctly on mobile and desktop.

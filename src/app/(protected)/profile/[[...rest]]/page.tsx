@@ -1,5 +1,5 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { UserProfile } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
 
 export default async function ProfilePage() {
   const user = await currentUser();

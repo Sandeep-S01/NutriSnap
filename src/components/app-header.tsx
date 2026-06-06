@@ -17,7 +17,7 @@ const navItems = [
 
 export function AppHeader() {
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="hidden border-b border-slate-200 bg-white lg:block">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8 lg:px-10">
         <Link href="/dashboard" className="flex items-center gap-3">
           <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-600 text-white">
