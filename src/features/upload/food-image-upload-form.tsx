@@ -3,8 +3,8 @@
 import { Camera, ImageIcon, Loader2, RotateCcw, Upload, X } from "lucide-react";
 import Image from "next/image";
 import { FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { upload } from "@vercel/blob/client";
 import { analyzeFoodImage } from "@/actions/analyze-food-image";
-import { uploadFoodImage } from "@/actions/upload-food-image";
 import { FoodAnalysisResultCard } from "@/features/analysis/food-analysis-result";
 import { SaveMealButton } from "@/features/meals/save-meal-button";
 import {
@@ -18,6 +18,32 @@ import type { UploadFoodImageState } from "@/types/upload";
 const initialState: UploadFoodImageState = {
   status: "idle",
 };
+
+function getSafeFileName(fileName: string) {
+  return fileName
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function getClientUploadErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Unable to upload image. Please try again.";
+  }
+
+  const message = error.message.toLowerCase();
+
+  if (message.includes("client token") || message.includes("token")) {
+    return "Image storage is not configured correctly.";
+  }
+
+  if (message.includes("too large") || message.includes("size")) {
+    return "Image upload is too large. Choose a smaller image and try again.";
+  }
+
+  return "Unable to upload image. Please try again.";
+}
 
 function UploadButton({
   hasFile,
@@ -143,12 +169,36 @@ export function FoodImageUploadForm() {
       return;
     }
 
-    const formData = new FormData();
-    formData.set("image", selectedFile);
+    setError(null);
 
     startTransition(async () => {
-      const nextState = await uploadFoodImage(state, formData);
-      setState(nextState);
+      try {
+        const safeFileName = getSafeFileName(selectedFile.name) || "food-image";
+        const pathname = `food-images/${crypto.randomUUID()}-${safeFileName}`;
+        const blob = await upload(pathname, selectedFile, {
+          access: "public",
+          contentType: selectedFile.type,
+          handleUploadUrl: "/api/upload",
+          multipart: selectedFile.size > 5 * 1024 * 1024,
+        });
+
+        setState({
+          status: "success",
+          message: "Image uploaded successfully.",
+          image: {
+            url: blob.url,
+            pathname: blob.pathname,
+            contentType: blob.contentType,
+            contentDisposition: blob.contentDisposition,
+            uploadedAt: new Date().toISOString(),
+          },
+        });
+      } catch (uploadError) {
+        setState({
+          status: "error",
+          message: getClientUploadErrorMessage(uploadError),
+        });
+      }
     });
   }
 
