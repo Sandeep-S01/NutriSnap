@@ -13,6 +13,28 @@ const uploadFormSchema = z.object({
   image: z.instanceof(File, { message: "Image file is required." }),
 });
 
+function getUploadErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Unable to upload image. Please try again.";
+  }
+
+  const message = error.message.toLowerCase();
+
+  if (message.includes("token")) {
+    return "Image storage is not configured correctly.";
+  }
+
+  if (message.includes("body exceeded") || message.includes("413")) {
+    return "Image upload is too large. Choose a smaller image and try again.";
+  }
+
+  if (message.includes("blob")) {
+    return "Image storage failed. Please try again.";
+  }
+
+  return "Unable to upload image. Please try again.";
+}
+
 function getSafeFileName(fileName: string) {
   return fileName
     .toLowerCase()
@@ -64,7 +86,7 @@ export async function uploadFoodImage(
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       return {
         status: "error",
-        message: "BLOB_READ_WRITE_TOKEN is not configured.",
+        message: "Image storage is not configured correctly.",
       };
     }
 
@@ -75,6 +97,7 @@ export async function uploadFoodImage(
       access: "public",
       contentType: image.type,
       addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
     appLogger.info("Food image uploaded", {
@@ -99,7 +122,7 @@ export async function uploadFoodImage(
 
     return {
       status: "error",
-      message: "Unable to upload image. Please try again.",
+      message: getUploadErrorMessage(error),
     };
   }
 }
