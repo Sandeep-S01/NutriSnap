@@ -183,3 +183,4 @@ All planned MVP phases are complete.
 - Moved the Clerk profile route to `/profile/[[...rest]]` so Clerk account subroutes work correctly on mobile and desktop.
 - Removed the unnecessary Vercel Blob upload-completed callback dependency from the scan upload route.
 - Added client-side upload and analysis timeouts so the scan UI shows actionable errors instead of buffering indefinitely.
+- Replaced browser direct-to-Blob upload with browser compression plus an authenticated server upload endpoint to avoid unstable client-side Blob upload hangs.

@@ -1,15 +1,18 @@
 "use client";
 
 import { Camera, ImageIcon, Loader2, RotateCcw, Upload, X } from "lucide-react";
+import imageCompression from "browser-image-compression";
 import Image from "next/image";
 import { FormEvent, useEffect, useRef, useState, useTransition } from "react";
-import { upload } from "@vercel/blob/client";
 import { analyzeFoodImage } from "@/actions/analyze-food-image";
 import { FoodAnalysisResultCard } from "@/features/analysis/food-analysis-result";
 import { MobileFoodAnalysisResult } from "@/features/analysis/mobile-food-analysis-result";
 import { SaveMealButton } from "@/features/meals/save-meal-button";
 import {
   ACCEPTED_IMAGE_EXTENSIONS,
+  CLIENT_IMAGE_COMPRESSION_MAX_DIMENSION,
+  CLIENT_IMAGE_COMPRESSION_MAX_MB,
+  MAX_SERVER_UPLOAD_SIZE_BYTES,
   MAX_UPLOAD_SIZE_BYTES,
 } from "@/features/upload/upload-constants";
 import { validateFoodImageFile } from "@/features/upload/upload-validation";
@@ -44,14 +47,6 @@ async function withTimeout<T>(
   }
 }
 
-function getSafeFileName(fileName: string) {
-  return fileName
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 function getClientUploadErrorMessage(error: unknown) {
   if (!(error instanceof Error)) {
     return "Unable to upload image. Please try again.";
@@ -81,6 +76,50 @@ function getClientUploadErrorMessage(error: unknown) {
   }
 
   return "Unable to upload image. Please try again.";
+}
+
+async function compressImageForUpload(file: File) {
+  const compressedBlob = await imageCompression(file, {
+    maxSizeMB: CLIENT_IMAGE_COMPRESSION_MAX_MB,
+    maxWidthOrHeight: CLIENT_IMAGE_COMPRESSION_MAX_DIMENSION,
+    useWebWorker: true,
+    initialQuality: 0.82,
+    fileType: file.type,
+  });
+
+  const compressedFile = new File([compressedBlob], file.name, {
+    type: file.type,
+    lastModified: Date.now(),
+  });
+
+  if (compressedFile.size > MAX_SERVER_UPLOAD_SIZE_BYTES) {
+    throw new Error("Image is too large after compression.");
+  }
+
+  return compressedFile;
+}
+
+async function uploadImageToServer(file: File, signal: AbortSignal) {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+    signal,
+  });
+
+  const payload = (await response.json()) as UploadFoodImageState;
+
+  if (!response.ok || payload.status !== "success") {
+    throw new Error(
+      payload.status === "error"
+        ? payload.message
+        : "Unable to upload image. Please try again.",
+    );
+  }
+
+  return payload;
 }
 
 function UploadButton({
@@ -224,33 +263,18 @@ export function FoodImageUploadForm() {
 
     startTransition(async () => {
       try {
-        const safeFileName = getSafeFileName(selectedFile.name) || "food-image";
-        const pathname = `food-images/${crypto.randomUUID()}-${safeFileName}`;
-        const blob = await withTimeout(
+        const uploadState = await withTimeout(
           (signal) =>
-            upload(pathname, selectedFile, {
-              access: "public",
-              abortSignal: signal,
-              contentType: selectedFile.type,
-              handleUploadUrl: "/api/upload",
-              multipart: selectedFile.size > 5 * 1024 * 1024,
-            }),
+            compressImageForUpload(selectedFile).then((compressedFile) =>
+              uploadImageToServer(compressedFile, signal),
+            ),
           UPLOAD_TIMEOUT_MS,
           "Image upload timed out.",
         );
 
-        setState({
-          status: "success",
-          message: "Image uploaded successfully.",
-          image: {
-            url: blob.url,
-            pathname: blob.pathname,
-            contentType: blob.contentType,
-            contentDisposition: blob.contentDisposition,
-            uploadedAt: new Date().toISOString(),
-          },
-        });
+        setState(uploadState);
       } catch (uploadError) {
+        console.error("Food image upload request failed", uploadError);
         setState({
           status: "error",
           message: getClientUploadErrorMessage(uploadError),
