@@ -5,7 +5,7 @@ import {
 } from "@/features/analysis/food-analysis-schema";
 import type { FoodAnalysisResult } from "@/types/nutrition";
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 
 type GeminiPart = {
   text?: string;
@@ -91,7 +91,8 @@ export async function analyzeFoodImageWithGemini(
   }
 
   const image = await fetchImageAsBase64(imageUrl);
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  const model = process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(endpoint, {
     method: "POST",
