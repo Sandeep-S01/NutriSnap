@@ -5,7 +5,7 @@ const serverEnvSchema = z.object({
   DIRECT_URL: z.string().url("DIRECT_URL must be a valid PostgreSQL URL"),
   CLERK_SECRET_KEY: z.string().min(1, "CLERK_SECRET_KEY is required"),
   OPENAI_API_KEY: z.string().optional(),
-  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),
   NUTRISNAP_BLOB_READ_WRITE_TOKEN: z
     .string()
     .min(1, "NUTRISNAP_BLOB_READ_WRITE_TOKEN is required"),
@@ -50,10 +50,6 @@ export function getServerEnv(): ServerEnv {
         .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
         .join(", ")}`,
     );
-  }
-
-  if (!result.data.OPENAI_API_KEY && !result.data.GEMINI_API_KEY) {
-    throw new Error("Invalid server environment: configure GEMINI_API_KEY or OPENAI_API_KEY");
   }
 
   return result.data;

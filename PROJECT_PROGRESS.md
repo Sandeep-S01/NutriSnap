@@ -189,3 +189,4 @@ All planned MVP phases are complete.
 - Added Gemini Vision analysis support through `GEMINI_API_KEY`; the app now prefers Gemini when configured and keeps OpenAI as a fallback provider.
 - Adjusted Gemini response schema conversion to remove unsupported JSON Schema keywords before calling the Gemini API.
 - Updated the default Gemini model to `gemini-2.0-flash` and added `GEMINI_MODEL` override support.
+- Removed OpenAI fallback from food image analysis; Gemini is now the only active analysis provider.

@@ -2,14 +2,8 @@
 
 import { z } from "zod";
 import { requireCurrentUser } from "@/actions/auth";
-import {
-  foodAnalysisJsonSchema,
-  foodAnalysisSchema,
-} from "@/features/analysis/food-analysis-schema";
-import { foodAnalysisPrompt } from "@/features/analysis/food-analysis-prompt";
 import { analyzeFoodImageWithGemini } from "@/server/gemini";
 import { appLogger } from "@/server/logger";
-import { getOpenAIClient } from "@/server/openai";
 import { checkRateLimit } from "@/server/rate-limit";
 import { withRetry } from "@/server/retry";
 import type { AnalyzeFoodImageState } from "@/types/nutrition";
@@ -39,20 +33,24 @@ function getAnalysisErrorMessage(error: unknown) {
   const code = getErrorCode(error);
   const message = getErrorMessage(error).toLowerCase();
 
-  if (code === "insufficient_quota" || message.includes("insufficient_quota")) {
-    return "OpenAI quota is exhausted. Add billing or credits to your OpenAI project, then retry analysis.";
+  if (
+    code === "insufficient_quota" ||
+    message.includes("insufficient_quota") ||
+    message.includes("quota")
+  ) {
+    return "Gemini quota is exhausted for now. Please wait or check your Google AI Studio quota.";
   }
 
   if (status === 429) {
-    return "OpenAI rate limit reached. Please wait a moment and retry analysis.";
+    return "Gemini rate limit reached. Please wait a moment and retry analysis.";
   }
 
   if (status === 401 || code === "invalid_api_key") {
-    return "AI API key is invalid. Update the configured AI provider key and redeploy.";
+    return "Gemini API key is invalid. Update GEMINI_API_KEY and redeploy.";
   }
 
   if (status === 403) {
-    return "This AI key does not have access to the selected vision model.";
+    return "This Gemini key does not have access to the selected vision model.";
   }
 
   if (
@@ -61,11 +59,11 @@ function getAnalysisErrorMessage(error: unknown) {
       message.includes("fetch") ||
       message.includes("url"))
   ) {
-    return "The AI provider could not read the uploaded image. Please upload again and retry analysis.";
+    return "Gemini could not read the uploaded image. Please upload again and retry analysis.";
   }
 
   if (status >= 500) {
-    return "The AI provider is temporarily unavailable. Please retry analysis in a moment.";
+    return "Gemini is temporarily unavailable. Please retry analysis in a moment.";
   }
 
   return "Unable to analyze image. Please try again.";
@@ -100,99 +98,30 @@ export async function analyzeFoodImage(
       };
     }
 
-    if (process.env.GEMINI_API_KEY) {
-      const geminiResult = await withRetry(
-        () => analyzeFoodImageWithGemini(parsedInput.data.imageUrl),
-        {
-          attempts: 2,
-          delayMs: 750,
-          shouldRetry: (error) => {
-            const status = getErrorStatus(error);
-            return status === 0 || status === 429 || status >= 500;
-          },
-        },
-      );
-
+    if (!process.env.GEMINI_API_KEY) {
       return {
-        status: "success",
-        message: "Food analysis completed.",
-        analysis: geminiResult.analysis,
-        rawResponse: geminiResult.rawResponse,
+        status: "error",
+        message: "Gemini is not configured. Add GEMINI_API_KEY in Vercel and redeploy.",
       };
     }
 
-    const openai = getOpenAIClient();
-    const response = await withRetry(
-      () =>
-        openai.responses.create({
-          model: "gpt-4o",
-          instructions: foodAnalysisPrompt,
-          input: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: "Analyze this food image and return the nutrition estimate.",
-                },
-                {
-                  type: "input_image",
-                  image_url: parsedInput.data.imageUrl,
-                  detail: "high",
-                },
-              ],
-            },
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "food_nutrition_analysis",
-              strict: true,
-              schema: foodAnalysisJsonSchema,
-            },
-          },
-        }),
+    const geminiResult = await withRetry(
+      () => analyzeFoodImageWithGemini(parsedInput.data.imageUrl),
       {
         attempts: 2,
         delayMs: 750,
         shouldRetry: (error) => {
           const status = getErrorStatus(error);
-          const code = getErrorCode(error);
-
-          return (
-            code !== "insufficient_quota" &&
-            status !== 401 &&
-            status !== 403 &&
-            (status === 0 || status === 429 || status >= 500)
-          );
+          return status === 0 || status >= 500;
         },
       },
     );
 
-    if (!response.output_text) {
-      return {
-        status: "error",
-        message: "OpenAI returned an empty analysis response.",
-        rawResponse: response,
-      };
-    }
-
-    const parsedJson = JSON.parse(response.output_text) as unknown;
-    const parsedAnalysis = foodAnalysisSchema.safeParse(parsedJson);
-
-    if (!parsedAnalysis.success) {
-      return {
-        status: "error",
-        message: "OpenAI returned analysis data in an unexpected shape.",
-        rawResponse: parsedJson,
-      };
-    }
-
     return {
       status: "success",
       message: "Food analysis completed.",
-      analysis: parsedAnalysis.data,
-      rawResponse: parsedJson,
+      analysis: geminiResult.analysis,
+      rawResponse: geminiResult.rawResponse,
     };
   } catch (error) {
     appLogger.error("Food image analysis failed", error);
