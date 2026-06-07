@@ -20,6 +20,30 @@ const initialState: UploadFoodImageState = {
   status: "idle",
 };
 
+const UPLOAD_TIMEOUT_MS = 60_000;
+const ANALYSIS_TIMEOUT_MS = 75_000;
+
+function createTimeoutError(message: string) {
+  return new DOMException(message, "TimeoutError");
+}
+
+async function withTimeout<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  message: string,
+) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => {
+    controller.abort(createTimeoutError(message));
+  }, timeoutMs);
+
+  try {
+    return await operation(controller.signal);
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 function getSafeFileName(fileName: string) {
   return fileName
     .toLowerCase()
@@ -41,6 +65,19 @@ function getClientUploadErrorMessage(error: unknown) {
 
   if (message.includes("too large") || message.includes("size")) {
     return "Image upload is too large. Choose a smaller image and try again.";
+  }
+
+  if (
+    error.name === "AbortError" ||
+    error.name === "TimeoutError" ||
+    message.includes("timeout") ||
+    message.includes("aborted")
+  ) {
+    return "Image upload took too long. Please check your connection and try again.";
+  }
+
+  if (message.includes("unauthorized") || message.includes("401")) {
+    return "Your session expired. Please sign in again and retry.";
   }
 
   return "Unable to upload image. Please try again.";
@@ -124,8 +161,21 @@ export function FoodImageUploadForm() {
     setAnalysisState({ status: "loading", message: "Analyzing image..." });
 
     startAnalysisTransition(async () => {
-      const nextAnalysisState = await analyzeFoodImage({ imageUrl });
-      setAnalysisState(nextAnalysisState);
+      try {
+        const nextAnalysisState = await withTimeout(
+          () => analyzeFoodImage({ imageUrl }),
+          ANALYSIS_TIMEOUT_MS,
+          "Food analysis timed out.",
+        );
+        setAnalysisState(nextAnalysisState);
+      } catch (analysisError) {
+        console.error("Food image analysis request failed", analysisError);
+        setAnalysisState({
+          status: "error",
+          message:
+            "Food analysis took too long. Please retry with a clearer or smaller image.",
+        });
+      }
     });
   }
 
@@ -176,12 +226,18 @@ export function FoodImageUploadForm() {
       try {
         const safeFileName = getSafeFileName(selectedFile.name) || "food-image";
         const pathname = `food-images/${crypto.randomUUID()}-${safeFileName}`;
-        const blob = await upload(pathname, selectedFile, {
-          access: "public",
-          contentType: selectedFile.type,
-          handleUploadUrl: "/api/upload",
-          multipart: selectedFile.size > 5 * 1024 * 1024,
-        });
+        const blob = await withTimeout(
+          (signal) =>
+            upload(pathname, selectedFile, {
+              access: "public",
+              abortSignal: signal,
+              contentType: selectedFile.type,
+              handleUploadUrl: "/api/upload",
+              multipart: selectedFile.size > 5 * 1024 * 1024,
+            }),
+          UPLOAD_TIMEOUT_MS,
+          "Image upload timed out.",
+        );
 
         setState({
           status: "success",

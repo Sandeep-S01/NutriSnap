@@ -181,3 +181,5 @@ All planned MVP phases are complete.
 - Added a mobile nutritional analysis screen for successful food scans with hero image, confidence overlay, total calories, macro cards, micronutrient rows, and a full-width log meal action.
 - Kept the existing desktop upload and analysis layout unchanged.
 - Moved the Clerk profile route to `/profile/[[...rest]]` so Clerk account subroutes work correctly on mobile and desktop.
+- Removed the unnecessary Vercel Blob upload-completed callback dependency from the scan upload route.
+- Added client-side upload and analysis timeouts so the scan UI shows actionable errors instead of buffering indefinitely.

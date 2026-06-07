@@ -10,6 +10,19 @@ import { appLogger } from "@/server/logger";
 
 export const runtime = "nodejs";
 
+function isUploadBody(body: unknown): body is HandleUploadBody {
+  if (!body || typeof body !== "object" || !("type" in body)) {
+    return false;
+  }
+
+  const type = (body as { type: unknown }).type;
+
+  return (
+    type === "blob.generate-client-token" ||
+    type === "blob.upload-completed"
+  );
+}
+
 function isValidUploadPathname(pathname: string) {
   return (
     pathname.startsWith("food-images/") &&
@@ -36,7 +49,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as HandleUploadBody;
+    const body = await request.json();
+
+    if (!isUploadBody(body)) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Invalid upload request.",
+        },
+        { status: 400 },
+      );
+    }
+
     const response = await handleUpload({
       request,
       body,
@@ -58,12 +82,6 @@ export async function POST(request: NextRequest) {
           addRandomSuffix: false,
           tokenPayload: JSON.stringify({ userId }),
         };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        appLogger.info("Blob client upload completed", {
-          pathname: blob.pathname,
-          hasTokenPayload: Boolean(tokenPayload),
-        });
       },
     });
 
