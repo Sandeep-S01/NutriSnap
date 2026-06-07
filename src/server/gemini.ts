@@ -67,13 +67,18 @@ function extractJson(text: string) {
 }
 
 function toGeminiSchema(schema: typeof foodAnalysisJsonSchema) {
-  return JSON.parse(JSON.stringify(schema, (_key, value) => {
-    if (value === "object") return "OBJECT";
-    if (value === "array") return "ARRAY";
-    if (value === "string") return "STRING";
-    if (value === "number") return "NUMBER";
-    return value;
-  })) as unknown;
+  return JSON.parse(
+    JSON.stringify(schema, (key, value) => {
+      if (key === "additionalProperties") return undefined;
+      if (key === "minimum") return undefined;
+      if (key === "maximum") return undefined;
+      if (value === "object") return "OBJECT";
+      if (value === "array") return "ARRAY";
+      if (value === "string") return "STRING";
+      if (value === "number") return "NUMBER";
+      return value;
+    }),
+  ) as unknown;
 }
 
 export async function analyzeFoodImageWithGemini(

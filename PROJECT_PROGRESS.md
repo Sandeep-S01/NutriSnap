@@ -187,3 +187,4 @@ All planned MVP phases are complete.
 - Switched the app from Vercel's reserved `BLOB_READ_WRITE_TOKEN` name to `NUTRISNAP_BLOB_READ_WRITE_TOKEN` to avoid linked private Blob stores overriding the public upload token.
 - Added specific OpenAI analysis error messages for exhausted quota, invalid keys, model access, image URL fetch failures, and transient API failures.
 - Added Gemini Vision analysis support through `GEMINI_API_KEY`; the app now prefers Gemini when configured and keeps OpenAI as a fallback provider.
+- Adjusted Gemini response schema conversion to remove unsupported JSON Schema keywords before calling the Gemini API.
