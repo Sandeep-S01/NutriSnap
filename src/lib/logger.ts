@@ -39,9 +39,9 @@ export const logTracker = {
     });
   },
 
-  openAiError: (action: string, error: unknown, context?: Record<string, any>) => {
+  aiError: (action: string, error: unknown, context?: Record<string, any>) => {
     logger.error({
-      msg: `OpenAI service failure: ${action}`,
+      msg: `AI service failure: ${action}`,
       err: error instanceof Error ? { message: error.message, stack: error.stack } : error,
       ...context,
     });

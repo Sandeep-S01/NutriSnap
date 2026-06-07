@@ -1,6 +1,6 @@
 # NutriSnap
 
-NutriSnap is a production-ready MVP for AI-powered food image analysis and meal tracking. Users upload a food photo, GPT-4o Vision estimates nutrition, and saved meals update dashboard and analytics views.
+NutriSnap is a production-ready MVP for AI-powered food image analysis and meal tracking. Users upload a food photo, Gemini Vision estimates nutrition, and saved meals update dashboard and analytics views.
 
 ## Stack
 
@@ -9,7 +9,7 @@ NutriSnap is a production-ready MVP for AI-powered food image analysis and meal 
 - Tailwind CSS
 - Clerk authentication
 - PostgreSQL with Prisma
-- OpenAI GPT-4o Vision
+- Google Gemini Vision
 - Vercel Blob storage
 - Vercel deployment
 
@@ -18,7 +18,7 @@ NutriSnap is a production-ready MVP for AI-powered food image analysis and meal 
 - Clerk sign up, sign in, user profile, and protected routes
 - Camera, gallery, and drag/drop image upload
 - Vercel Blob image storage with file type and size validation
-- GPT-4o Vision food analysis with structured JSON output
+- Gemini food analysis with structured JSON output
 - Meal save, update, and delete APIs
 - Dashboard with today's totals and recent meals
 - Weekly/monthly analytics with nutrition trends and most eaten foods

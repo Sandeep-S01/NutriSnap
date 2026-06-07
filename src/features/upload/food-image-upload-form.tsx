@@ -451,7 +451,7 @@ export function FoodImageUploadForm() {
           <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-3 text-sm font-medium text-slate-700">
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Analyzing food image with GPT-4o Vision...
+              Analyzing food image with Gemini Vision...
             </div>
           </section>
         ) : null}
