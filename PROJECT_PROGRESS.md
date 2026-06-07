@@ -185,3 +185,4 @@ All planned MVP phases are complete.
 - Added client-side upload and analysis timeouts so the scan UI shows actionable errors instead of buffering indefinitely.
 - Replaced browser direct-to-Blob upload with browser compression plus an authenticated server upload endpoint to avoid unstable client-side Blob upload hangs.
 - Switched the app from Vercel's reserved `BLOB_READ_WRITE_TOKEN` name to `NUTRISNAP_BLOB_READ_WRITE_TOKEN` to avoid linked private Blob stores overriding the public upload token.
+- Added specific OpenAI analysis error messages for exhausted quota, invalid keys, model access, image URL fetch failures, and transient API failures.

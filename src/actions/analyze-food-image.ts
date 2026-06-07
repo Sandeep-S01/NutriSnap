@@ -17,6 +17,59 @@ const analyzeFoodImageInputSchema = z.object({
   imageUrl: z.string().url("A valid uploaded image URL is required."),
 });
 
+function getErrorStatus(error: unknown) {
+  return error && typeof error === "object" && "status" in error
+    ? Number(error.status)
+    : 0;
+}
+
+function getErrorCode(error: unknown) {
+  return error && typeof error === "object" && "code" in error
+    ? String(error.code)
+    : "";
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getAnalysisErrorMessage(error: unknown) {
+  const status = getErrorStatus(error);
+  const code = getErrorCode(error);
+  const message = getErrorMessage(error).toLowerCase();
+
+  if (code === "insufficient_quota" || message.includes("insufficient_quota")) {
+    return "OpenAI quota is exhausted. Add billing or credits to your OpenAI project, then retry analysis.";
+  }
+
+  if (status === 429) {
+    return "OpenAI rate limit reached. Please wait a moment and retry analysis.";
+  }
+
+  if (status === 401 || code === "invalid_api_key") {
+    return "OpenAI API key is invalid. Update OPENAI_API_KEY and redeploy.";
+  }
+
+  if (status === 403) {
+    return "This OpenAI key does not have access to the selected vision model.";
+  }
+
+  if (
+    message.includes("image") &&
+    (message.includes("download") ||
+      message.includes("fetch") ||
+      message.includes("url"))
+  ) {
+    return "OpenAI could not read the uploaded image URL. Please upload again and retry analysis.";
+  }
+
+  if (status >= 500) {
+    return "OpenAI is temporarily unavailable. Please retry analysis in a moment.";
+  }
+
+  return "Unable to analyze image. Please try again.";
+}
+
 export async function analyzeFoodImage(
   input: z.infer<typeof analyzeFoodImageInputSchema>,
 ): Promise<AnalyzeFoodImageState> {
@@ -81,11 +134,15 @@ export async function analyzeFoodImage(
         attempts: 2,
         delayMs: 750,
         shouldRetry: (error) => {
-          const status = error && typeof error === "object" && "status" in error
-            ? Number(error.status)
-            : 0;
+          const status = getErrorStatus(error);
+          const code = getErrorCode(error);
 
-          return status === 0 || status === 429 || status >= 500;
+          return (
+            code !== "insufficient_quota" &&
+            status !== 401 &&
+            status !== 403 &&
+            (status === 0 || status === 429 || status >= 500)
+          );
         },
       },
     );
@@ -120,7 +177,7 @@ export async function analyzeFoodImage(
 
     return {
       status: "error",
-      message: "Unable to analyze image. Please try again.",
+      message: getAnalysisErrorMessage(error),
     };
   }
 }
