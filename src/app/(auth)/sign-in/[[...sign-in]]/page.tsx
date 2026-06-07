@@ -1,11 +1,15 @@
 import { SignIn } from "@clerk/nextjs";
+import { NutriSnapLogo } from "@/components/nutrisnap-logo";
 
 export default function SignInPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-5 py-10">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <p className="text-2xl font-semibold text-slate-950">NutriSnap</p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <NutriSnapLogo
+            className="justify-center"
+            markClassName="size-12"
+          />
           <p className="mt-2 text-sm text-slate-600">
             Sign in to continue tracking meals.
           </p>

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
-import { Camera, Database, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
+import { Database, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { NutriSnapLogo } from "@/components/nutrisnap-logo";
 
 const setupItems = [
   {
@@ -33,11 +34,8 @@ export default async function Home() {
     <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 py-6 sm:px-8 lg:px-10">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
-            <Camera className="size-5" aria-hidden="true" />
-          </div>
+          <NutriSnapLogo markClassName="size-10" />
           <div>
-            <p className="text-lg font-semibold leading-6">NutriSnap</p>
             <p className="text-sm text-muted-foreground">Phase 2 auth</p>
           </div>
         </div>

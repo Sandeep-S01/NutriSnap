@@ -1,12 +1,12 @@
 import { UserButton } from "@clerk/nextjs";
 import {
-  Camera,
   ChartNoAxesColumnIncreasing,
   LayoutDashboard,
   Upload,
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { NutriSnapLogo } from "@/components/nutrisnap-logo";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -20,12 +20,7 @@ export function AppHeader() {
     <header className="hidden border-b border-slate-200 bg-white lg:block">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8 lg:px-10">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-600 text-white">
-            <Camera className="size-5" aria-hidden="true" />
-          </span>
-          <span className="text-base font-semibold text-slate-950">
-            NutriSnap
-          </span>
+          <NutriSnapLogo markClassName="size-9" />
         </Link>
 
         <nav className="flex items-center gap-1">

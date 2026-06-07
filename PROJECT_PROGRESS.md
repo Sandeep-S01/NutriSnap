@@ -192,3 +192,7 @@ All planned MVP phases are complete.
 - Removed OpenAI fallback from food image analysis; Gemini is now the only active analysis provider.
 - Removed legacy OpenAI analysis files, UI copy, env references, and the `openai` npm dependency so the app cannot fall back to OpenAI.
 - Verified the Gemini-only code with `npm run lint` and `npm run build`.
+- Added a professional NutriSnap logo system with an SVG scan-frame nutrition mark, reusable React logo component, public horizontal logo asset, and SVG favicon/app icon.
+- Replaced the generic camera brand mark in the app header, landing page, and Clerk auth screens.
+- Removed the default Next.js favicon and wired metadata to the new NutriSnap SVG icon assets.
+- Verified the logo/favicon pass with `npm run lint` and `npm run build`.
