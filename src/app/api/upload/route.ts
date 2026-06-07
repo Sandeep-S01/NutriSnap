@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     return errorResponse("Your session expired. Please sign in again.", 401);
   }
 
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+  const blobToken = process.env.NUTRISNAP_BLOB_READ_WRITE_TOKEN;
 
   if (!blobToken?.startsWith("vercel_blob_rw_")) {
     appLogger.error(

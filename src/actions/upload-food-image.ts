@@ -83,7 +83,7 @@ export async function uploadFoodImage(
       };
     }
 
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    if (!process.env.NUTRISNAP_BLOB_READ_WRITE_TOKEN) {
       return {
         status: "error",
         message: "Image storage is not configured correctly.",
@@ -97,7 +97,7 @@ export async function uploadFoodImage(
       access: "public",
       contentType: image.type,
       addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token: process.env.NUTRISNAP_BLOB_READ_WRITE_TOKEN,
     });
 
     appLogger.info("Food image uploaded", {
