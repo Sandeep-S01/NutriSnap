@@ -7,6 +7,7 @@ import {
   foodAnalysisSchema,
 } from "@/features/analysis/food-analysis-schema";
 import { foodAnalysisPrompt } from "@/features/analysis/food-analysis-prompt";
+import { analyzeFoodImageWithGemini } from "@/server/gemini";
 import { appLogger } from "@/server/logger";
 import { getOpenAIClient } from "@/server/openai";
 import { checkRateLimit } from "@/server/rate-limit";
@@ -47,11 +48,11 @@ function getAnalysisErrorMessage(error: unknown) {
   }
 
   if (status === 401 || code === "invalid_api_key") {
-    return "OpenAI API key is invalid. Update OPENAI_API_KEY and redeploy.";
+    return "AI API key is invalid. Update the configured AI provider key and redeploy.";
   }
 
   if (status === 403) {
-    return "This OpenAI key does not have access to the selected vision model.";
+    return "This AI key does not have access to the selected vision model.";
   }
 
   if (
@@ -60,11 +61,11 @@ function getAnalysisErrorMessage(error: unknown) {
       message.includes("fetch") ||
       message.includes("url"))
   ) {
-    return "OpenAI could not read the uploaded image URL. Please upload again and retry analysis.";
+    return "The AI provider could not read the uploaded image. Please upload again and retry analysis.";
   }
 
   if (status >= 500) {
-    return "OpenAI is temporarily unavailable. Please retry analysis in a moment.";
+    return "The AI provider is temporarily unavailable. Please retry analysis in a moment.";
   }
 
   return "Unable to analyze image. Please try again.";
@@ -96,6 +97,27 @@ export async function analyzeFoodImage(
         message:
           parsedInput.error.issues[0]?.message ??
           "A valid uploaded image URL is required.",
+      };
+    }
+
+    if (process.env.GEMINI_API_KEY) {
+      const geminiResult = await withRetry(
+        () => analyzeFoodImageWithGemini(parsedInput.data.imageUrl),
+        {
+          attempts: 2,
+          delayMs: 750,
+          shouldRetry: (error) => {
+            const status = getErrorStatus(error);
+            return status === 0 || status === 429 || status >= 500;
+          },
+        },
+      );
+
+      return {
+        status: "success",
+        message: "Food analysis completed.",
+        analysis: geminiResult.analysis,
+        rawResponse: geminiResult.rawResponse,
       };
     }
 
