@@ -1,6 +1,14 @@
 "use client";
 
-import { Camera, ImageIcon, Loader2, RotateCcw, Upload, X } from "lucide-react";
+import {
+  Camera,
+  ImageIcon,
+  Loader2,
+  RotateCcw,
+  ScanLine,
+  Upload,
+  X,
+} from "lucide-react";
 import imageCompression from "browser-image-compression";
 import Image from "next/image";
 import { FormEvent, useEffect, useRef, useState, useTransition } from "react";
@@ -25,6 +33,14 @@ const initialState: UploadFoodImageState = {
 
 const UPLOAD_TIMEOUT_MS = 60_000;
 const ANALYSIS_TIMEOUT_MS = 75_000;
+const MOBILE_CAMERA_CONSTRAINTS: MediaStreamConstraints = {
+  video: {
+    facingMode: { ideal: "environment" },
+    width: { ideal: 1280 },
+    height: { ideal: 1600 },
+  },
+  audio: false,
+};
 
 function createTimeoutError(message: string) {
   return new DOMException(message, "TimeoutError");
@@ -165,8 +181,22 @@ export function FoodImageUploadForm() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobileScanner, setIsMobileScanner] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState<
+    "idle" | "starting" | "ready" | "error"
+  >("idle");
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const mobileGalleryInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const hasCompletedMobileAnalysis =
+    analysisState.status === "success" &&
+    Boolean(analysisState.analysis) &&
+    Boolean(state.image?.url);
 
   useEffect(() => {
     if (!selectedFile) {
@@ -196,6 +226,81 @@ export function FoodImageUploadForm() {
     analyzeUploadedImage(state.image.url);
   }, [state.image?.url]);
 
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1023px)");
+
+    function syncScannerMode() {
+      setIsMobileScanner(query.matches);
+    }
+
+    syncScannerMode();
+    query.addEventListener("change", syncScannerMode);
+
+    return () => query.removeEventListener("change", syncScannerMode);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileScanner || hasCompletedMobileAnalysis) {
+      stopCameraStream();
+      return;
+    }
+
+    let cancelled = false;
+
+    async function startCameraStream() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraStatus("error");
+        setCameraError("Camera is not available in this browser.");
+        return;
+      }
+
+      setCameraStatus("starting");
+      setCameraError(null);
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(
+          MOBILE_CAMERA_CONSTRAINTS,
+        );
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+
+        setCameraStatus("ready");
+      } catch (cameraAccessError) {
+        console.error("Camera access failed", cameraAccessError);
+        setCameraStatus("error");
+        setCameraError(
+          "Camera permission is blocked. Use Upload image or allow camera access.",
+        );
+      }
+    }
+
+    startCameraStream();
+
+    return () => {
+      cancelled = true;
+      stopCameraStream();
+    };
+  }, [isMobileScanner, hasCompletedMobileAnalysis]);
+
+  function stopCameraStream() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }
+
   function analyzeUploadedImage(imageUrl: string) {
     setAnalysisState({ status: "loading", message: "Analyzing image..." });
 
@@ -218,7 +323,7 @@ export function FoodImageUploadForm() {
     });
   }
 
-  function selectFile(file: File | undefined) {
+  function selectFile(file: File | undefined, options?: { autoUpload?: boolean }) {
     if (!file) return;
 
     const validation = validateFoodImageFile(file);
@@ -234,6 +339,10 @@ export function FoodImageUploadForm() {
     setError(null);
     setState(initialState);
     setAnalysisState({ status: "idle" });
+
+    if (options?.autoUpload) {
+      uploadSelectedFile(validation.data);
+    }
   }
 
   function clearSelection() {
@@ -249,23 +358,20 @@ export function FoodImageUploadForm() {
     if (galleryInputRef.current) {
       galleryInputRef.current.value = "";
     }
+
+    if (mobileGalleryInputRef.current) {
+      mobileGalleryInputRef.current.value = "";
+    }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedFile) {
-      setError("Select an image to upload.");
-      return;
-    }
-
+  function uploadSelectedFile(file: File) {
     setError(null);
 
     startTransition(async () => {
       try {
         const uploadState = await withTimeout(
           (signal) =>
-            compressImageForUpload(selectedFile).then((compressedFile) =>
+            compressImageForUpload(file).then((compressedFile) =>
               uploadImageToServer(compressedFile, signal),
             ),
           UPLOAD_TIMEOUT_MS,
@@ -283,10 +389,57 @@ export function FoodImageUploadForm() {
     });
   }
 
-  const hasCompletedMobileAnalysis =
-    analysisState.status === "success" &&
-    Boolean(analysisState.analysis) &&
-    Boolean(state.image?.url);
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedFile) {
+      setError("Select an image to upload.");
+      return;
+    }
+
+    uploadSelectedFile(selectedFile);
+  }
+
+  async function captureCameraFrame() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || cameraStatus !== "ready") {
+      setError("Camera is not ready yet.");
+      return;
+    }
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (!width || !height) {
+      setError("Camera preview is still loading.");
+      return;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d")?.drawImage(video, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.88),
+    );
+
+    if (!blob) {
+      setError("Unable to capture camera image.");
+      return;
+    }
+
+    const file = new File([blob], `nutrisnap-scan-${Date.now()}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+
+    selectFile(file, { autoUpload: true });
+  }
+
+  const isProcessing =
+    isPending || isAnalyzing || analysisState.status === "loading";
 
   return (
     <>
@@ -301,9 +454,151 @@ export function FoodImageUploadForm() {
         />
       ) : null}
 
+      <section
+        className={[
+          "fixed inset-0 z-20 overflow-hidden bg-slate-950 lg:hidden",
+          hasCompletedMobileAnalysis ? "hidden" : "",
+        ].join(" ")}
+      >
+        <div className="absolute inset-0">
+          {previewUrl && isProcessing ? (
+            <Image
+              src={previewUrl}
+              alt="Food scan preview"
+              fill
+              className="object-cover"
+              unoptimized
+              priority
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              className="h-full w-full object-cover"
+              playsInline
+              muted
+              autoPlay
+            />
+          )}
+          <div className="absolute inset-0 bg-black/20" />
+        </div>
+
+        <div className="pointer-events-none absolute inset-x-0 top-9 flex justify-center">
+          <div className="inline-flex items-center gap-3 rounded-full bg-slate-950/75 px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white shadow-xl backdrop-blur">
+            <span
+              className={[
+                "size-3 rounded-full",
+                isProcessing || cameraStatus === "ready"
+                  ? "bg-emerald-400"
+                  : "bg-amber-300",
+              ].join(" ")}
+            />
+            {isProcessing ? "Analyzing..." : "Scanning..."}
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute inset-x-8 top-[18%] h-[42%]">
+          <div className="absolute left-0 top-0 size-16 border-l-4 border-t-4 border-emerald-400" />
+          <div className="absolute right-0 top-0 size-16 border-r-4 border-t-4 border-emerald-400" />
+          <div className="absolute bottom-0 left-0 size-16 border-b-4 border-l-4 border-emerald-400" />
+          <div className="absolute bottom-0 right-0 size-16 border-b-4 border-r-4 border-emerald-400" />
+          <div className="absolute inset-x-0 top-1/2 h-px bg-emerald-400/80" />
+        </div>
+
+        <div className="absolute inset-x-5 bottom-28 space-y-3">
+          {cameraStatus === "error" || error || state.status === "error" ? (
+            <div className="rounded-2xl bg-white/95 p-4 text-sm text-red-700 shadow-lg backdrop-blur">
+              {error ?? state.message ?? cameraError}
+            </div>
+          ) : null}
+
+          {state.status === "success" || analysisState.status === "loading" ? (
+            <div className="rounded-2xl bg-white/95 p-4 shadow-lg backdrop-blur">
+              <p className="text-sm font-semibold text-slate-950">
+                {analysisState.status === "loading"
+                  ? "Analyzing your meal"
+                  : "Image uploaded"}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Keep this screen open while NutriSnap estimates nutrition.
+              </p>
+            </div>
+          ) : null}
+
+          {analysisState.status === "error" ? (
+            <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-800 shadow-lg">
+              <p className="font-semibold">Analysis failed</p>
+              <p className="mt-1">{analysisState.message}</p>
+              {state.image?.url ? (
+                <button
+                  type="button"
+                  onClick={() => analyzeUploadedImage(state.image?.url ?? "")}
+                  className="mt-3 inline-flex h-10 items-center rounded-full bg-red-700 px-4 font-semibold text-white"
+                >
+                  <RotateCcw className="mr-2 size-4" aria-hidden="true" />
+                  Retry
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 border-t border-white/20 bg-white/95 px-5 pb-[calc(env(safe-area-inset-bottom)+5.75rem)] pt-4 shadow-[0_-12px_35px_rgba(15,23,42,0.2)] backdrop-blur">
+          <div className="mx-auto grid max-w-md grid-cols-[1fr_auto_1fr] items-center gap-5">
+            <button
+              type="button"
+              onClick={() => mobileGalleryInputRef.current?.click()}
+              disabled={isProcessing}
+              className="flex h-12 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 disabled:opacity-50"
+            >
+              <ImageIcon className="mr-2 size-4" aria-hidden="true" />
+              Upload
+            </button>
+
+            <button
+              type="button"
+              onClick={captureCameraFrame}
+              disabled={cameraStatus !== "ready" || isProcessing}
+              className="flex size-20 items-center justify-center rounded-full border-[6px] border-white bg-emerald-500 text-white shadow-[0_0_0_6px_rgba(34,197,94,0.22),0_18px_35px_rgba(4,120,87,0.4)] disabled:bg-slate-300 disabled:shadow-none"
+              aria-label="Scan food"
+            >
+              {isProcessing ? (
+                <Loader2 className="size-8 animate-spin" aria-hidden="true" />
+              ) : (
+                <Camera className="size-8" aria-hidden="true" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                clearSelection();
+                setCameraStatus(streamRef.current ? "ready" : "idle");
+                setCameraError(null);
+              }}
+              disabled={isProcessing}
+              className="flex h-12 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 disabled:opacity-50"
+            >
+              <ScanLine className="mr-2 size-4" aria-hidden="true" />
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <input
+          ref={mobileGalleryInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          onChange={(event) =>
+            selectFile(event.target.files?.[0], { autoUpload: true })
+          }
+        />
+        <canvas ref={canvasRef} className="hidden" />
+      </section>
+
       <div
         className={[
-          "grid gap-5 lg:grid-cols-[1fr_0.85fr]",
+          "hidden gap-5 lg:grid lg:grid-cols-[1fr_0.85fr]",
           hasCompletedMobileAnalysis ? "hidden lg:grid" : "",
         ].join(" ")}
       >

@@ -200,3 +200,7 @@ All planned MVP phases are complete.
 - Added optional OpenRouter vision fallback using `OPENROUTER_API_KEY` and `OPENROUTER_MODEL`.
 - Added provider-chain execution for food analysis so NutriSnap tries Gemini primary, Gemini fallback, then OpenRouter before showing an analysis error.
 - Updated setup and deployment documentation with the current Neon, Gemini, OpenRouter, and `NUTRISNAP_BLOB_READ_WRITE_TOKEN` environment variables.
+- Added a mobile-first scan screen that opens the device camera on `/upload`, shows a scanning overlay, captures a frame to an image file, and reuses the existing upload/analyze pipeline.
+- Added a mobile upload option inside the scan screen so users can choose an image instead of using the camera.
+- Kept the desktop drag/drop upload and preview layout unchanged.
+- Verified the mobile scanner update with `npm run lint` and `npm run build`.
