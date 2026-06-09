@@ -1,11 +1,16 @@
 import { foodAnalysisPrompt } from "@/features/analysis/food-analysis-prompt";
 import {
   foodAnalysisJsonSchema,
-  foodAnalysisSchema,
 } from "@/features/analysis/food-analysis-schema";
-import type { FoodAnalysisResult } from "@/types/nutrition";
+import {
+  createProviderError,
+  fetchImageAsBase64,
+  parseFoodAnalysisJson,
+  type FoodAnalysisProviderResult,
+} from "@/server/ai-analysis-utils";
 
-const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
+export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
+export const DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-2.5-flash";
 
 type GeminiPart = {
   text?: string;
@@ -30,42 +35,6 @@ type GeminiResponse = {
   };
 };
 
-async function fetchImageAsBase64(imageUrl: string) {
-  const response = await fetch(imageUrl, {
-    headers: {
-      Accept: "image/jpeg,image/png,image/webp",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Unable to download uploaded image: ${response.status}`);
-  }
-
-  const contentType = response.headers.get("content-type") ?? "image/jpeg";
-  const bytes = Buffer.from(await response.arrayBuffer());
-
-  return {
-    base64: bytes.toString("base64"),
-    contentType,
-  };
-}
-
-function extractJson(text: string) {
-  const trimmed = text.trim();
-
-  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-    return trimmed;
-  }
-
-  const match = trimmed.match(/\{[\s\S]*\}/);
-
-  if (!match) {
-    throw new Error("Gemini returned a response without JSON.");
-  }
-
-  return match[0];
-}
-
 function toGeminiSchema(schema: typeof foodAnalysisJsonSchema) {
   return JSON.parse(
     JSON.stringify(schema, (key, value) => {
@@ -83,7 +52,8 @@ function toGeminiSchema(schema: typeof foodAnalysisJsonSchema) {
 
 export async function analyzeFoodImageWithGemini(
   imageUrl: string,
-): Promise<{ analysis: FoodAnalysisResult; rawResponse: unknown }> {
+  options?: { model?: string },
+): Promise<FoodAnalysisProviderResult> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -91,7 +61,7 @@ export async function analyzeFoodImageWithGemini(
   }
 
   const image = await fetchImageAsBase64(imageUrl);
-  const model = process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
+  const model = options?.model ?? process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(endpoint, {
@@ -129,12 +99,13 @@ export async function analyzeFoodImageWithGemini(
   if (!response.ok || payload.error) {
     const message =
       payload.error?.message ?? `Gemini request failed: ${response.status}`;
-    const error = new Error(message);
-    Object.assign(error, {
+    throw createProviderError({
+      provider: "Gemini",
+      model,
       status: response.status,
       code: payload.error?.status,
+      message,
     });
-    throw error;
   }
 
   const outputText =
@@ -147,15 +118,10 @@ export async function analyzeFoodImageWithGemini(
     throw new Error("Gemini returned an empty analysis response.");
   }
 
-  const parsedJson = JSON.parse(extractJson(outputText)) as unknown;
-  const parsedAnalysis = foodAnalysisSchema.safeParse(parsedJson);
-
-  if (!parsedAnalysis.success) {
-    throw new Error("Gemini returned analysis data in an unexpected shape.");
-  }
-
   return {
-    analysis: parsedAnalysis.data,
-    rawResponse: parsedJson,
+    analysis: parseFoodAnalysisJson(outputText, "Gemini"),
+    rawResponse: payload,
+    provider: "Gemini",
+    model,
   };
 }

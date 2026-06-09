@@ -7,7 +7,7 @@ NutriSnap is prepared for deployment on Vercel with:
 - Next.js App Router
 - PostgreSQL accessed through Prisma
 - Clerk authentication
-- OpenAI GPT-4o Vision
+- Google Gemini Vision with optional OpenRouter fallback
 - Vercel Blob storage
 
 ## Required Vercel Environment Variables
@@ -24,8 +24,12 @@ Configure these variables in Vercel Project Settings for Production, Preview, an
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Yes | Use `/sign-up`. |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | Yes | Use `/dashboard`. |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | Yes | Use `/dashboard`. |
-| `OPENAI_API_KEY` | Yes | OpenAI API key. |
-| `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob read/write token. |
+| `GEMINI_API_KEY` | Yes | Google AI Studio Gemini API key. |
+| `GEMINI_MODEL` | No | Defaults to `gemini-2.5-flash-lite`. |
+| `GEMINI_FALLBACK_MODEL` | No | Defaults to `gemini-2.5-flash`. |
+| `OPENROUTER_API_KEY` | No | Enables OpenRouter as the final free vision fallback provider. |
+| `OPENROUTER_MODEL` | No | Defaults to `google/gemma-4-26b-a4b-it:free`. |
+| `NUTRISNAP_BLOB_READ_WRITE_TOKEN` | Yes | Public Vercel Blob read/write token for this app. |
 | `NEXT_PUBLIC_APP_URL` | Yes | Production app URL, for example `https://your-domain.com`. |
 
 ## Database Migration
@@ -38,16 +42,14 @@ npm run db:migrate:deploy
 
 For Vercel deployments, run this command from a trusted local machine or CI job that has the production `DATABASE_URL` and `DIRECT_URL`.
 
-## Supabase Postgres Connection Strings
+## Neon Postgres Connection Strings
 
-Use Supabase's connection pooler strings for Vercel:
+Use Neon's pooled connection for runtime traffic and the direct connection for Prisma migrations:
 
 ```bash
-DATABASE_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:5432/postgres"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require"
 ```
-
-Use the transaction pooler on port `6543` for runtime traffic and the session/direct connection on port `5432` for Prisma migrations.
 
 ## Vercel Build Settings
 
@@ -79,7 +81,7 @@ In Clerk:
 
 ## Vercel Blob Configuration
 
-Create a Vercel Blob store and add the generated `BLOB_READ_WRITE_TOKEN` to the Vercel project environment variables.
+Create a public Vercel Blob store and add the generated read/write token as `NUTRISNAP_BLOB_READ_WRITE_TOKEN` in the Vercel project environment variables.
 
 Uploaded food images are stored under:
 
@@ -87,9 +89,13 @@ Uploaded food images are stored under:
 users/{clerkUserId}/food-images/{uuid}-{filename}
 ```
 
-## OpenAI Configuration
+## AI Provider Configuration
 
-Set `OPENAI_API_KEY` in Vercel. The app uses GPT-4o Vision through the OpenAI Responses API with strict structured JSON output.
+Set `GEMINI_API_KEY` in Vercel. The app tries AI analysis in this order:
+
+1. `GEMINI_MODEL`, default `gemini-2.5-flash-lite`
+2. `GEMINI_FALLBACK_MODEL`, default `gemini-2.5-flash`
+3. `OPENROUTER_MODEL`, default `google/gemma-4-26b-a4b-it:free`, only when `OPENROUTER_API_KEY` is configured
 
 ## Preflight Checklist
 
@@ -106,8 +112,9 @@ Confirm:
 - `npm run db:migrate:deploy` has run against production.
 - Vercel environment variables are configured.
 - Clerk production domain and redirects are configured.
-- Vercel Blob token is present.
-- OpenAI key is present and has billing/quota available.
+- `NUTRISNAP_BLOB_READ_WRITE_TOKEN` is present.
+- Gemini key is present and has quota available.
+- Optional OpenRouter key is present if fallback coverage is required.
 
 ## Post-Deployment Smoke Test
 
@@ -117,7 +124,7 @@ After deployment:
 2. Sign up with Clerk.
 3. Open `/upload`.
 4. Upload a `jpg`, `jpeg`, `png`, or `webp` image under 10MB.
-5. Confirm GPT-4o analysis returns nutrition data.
+5. Confirm AI analysis returns nutrition data.
 6. Save the meal.
 7. Confirm `/dashboard` updates today's totals.
 8. Confirm `/analytics` shows weekly/monthly trends.

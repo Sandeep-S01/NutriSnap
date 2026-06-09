@@ -2,8 +2,16 @@
 
 import { z } from "zod";
 import { requireCurrentUser } from "@/actions/auth";
-import { analyzeFoodImageWithGemini } from "@/server/gemini";
+import {
+  analyzeFoodImageWithGemini,
+  DEFAULT_GEMINI_FALLBACK_MODEL,
+  DEFAULT_GEMINI_MODEL,
+} from "@/server/gemini";
 import { appLogger } from "@/server/logger";
+import {
+  analyzeFoodImageWithOpenRouter,
+  DEFAULT_OPENROUTER_MODEL,
+} from "@/server/openrouter";
 import { checkRateLimit } from "@/server/rate-limit";
 import { withRetry } from "@/server/retry";
 import type { AnalyzeFoodImageState } from "@/types/nutrition";
@@ -24,6 +32,18 @@ function getErrorCode(error: unknown) {
     : "";
 }
 
+function getErrorProvider(error: unknown) {
+  return error && typeof error === "object" && "provider" in error
+    ? String(error.provider)
+    : "AI provider";
+}
+
+function getErrorModel(error: unknown) {
+  return error && typeof error === "object" && "model" in error
+    ? String(error.model)
+    : "";
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -31,6 +51,7 @@ function getErrorMessage(error: unknown) {
 function getAnalysisErrorMessage(error: unknown) {
   const status = getErrorStatus(error);
   const code = getErrorCode(error);
+  const provider = getErrorProvider(error);
   const message = getErrorMessage(error).toLowerCase();
 
   if (
@@ -38,19 +59,19 @@ function getAnalysisErrorMessage(error: unknown) {
     message.includes("insufficient_quota") ||
     message.includes("quota")
   ) {
-    return "Gemini quota is exhausted for now. Please wait or check your Google AI Studio quota.";
+    return `${provider} quota is exhausted for now. Please wait or check that provider's quota.`;
   }
 
   if (status === 429) {
-    return "Gemini rate limit reached. Please wait a moment and retry analysis.";
+    return `${provider} rate limit reached. Please wait a moment and retry analysis.`;
   }
 
   if (status === 401 || code === "invalid_api_key") {
-    return "Gemini API key is invalid. Update GEMINI_API_KEY and redeploy.";
+    return `${provider} API key is invalid. Update the provider API key and redeploy.`;
   }
 
   if (status === 403) {
-    return "This Gemini key does not have access to the selected vision model.";
+    return `${provider} does not have access to the selected vision model.`;
   }
 
   if (
@@ -59,14 +80,113 @@ function getAnalysisErrorMessage(error: unknown) {
       message.includes("fetch") ||
       message.includes("url"))
   ) {
-    return "Gemini could not read the uploaded image. Please upload again and retry analysis.";
+    return "The AI provider could not read the uploaded image. Please upload again and retry analysis.";
   }
 
   if (status >= 500) {
-    return "Gemini is temporarily unavailable. Please retry analysis in a moment.";
+    return `${provider} is temporarily unavailable. Please retry analysis in a moment.`;
   }
 
   return "Unable to analyze image. Please try again.";
+}
+
+function shouldRetryProvider(error: unknown) {
+  const status = getErrorStatus(error);
+  return status === 0 || status >= 500;
+}
+
+function isImageFetchError(error: unknown) {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("image") &&
+    (message.includes("download") ||
+      message.includes("fetch") ||
+      message.includes("url"))
+  );
+}
+
+function getProviderAttempts(imageUrl: string) {
+  const providers: Array<{
+    provider: string;
+    model: string;
+    run: () => ReturnType<typeof analyzeFoodImageWithGemini>;
+  }> = [];
+
+  if (process.env.GEMINI_API_KEY) {
+    const primaryGeminiModel = process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
+    const fallbackGeminiModel =
+      process.env.GEMINI_FALLBACK_MODEL ?? DEFAULT_GEMINI_FALLBACK_MODEL;
+
+    providers.push({
+      provider: "Gemini",
+      model: primaryGeminiModel,
+      run: () =>
+        analyzeFoodImageWithGemini(imageUrl, { model: primaryGeminiModel }),
+    });
+
+    if (fallbackGeminiModel !== primaryGeminiModel) {
+      providers.push({
+        provider: "Gemini",
+        model: fallbackGeminiModel,
+        run: () =>
+          analyzeFoodImageWithGemini(imageUrl, { model: fallbackGeminiModel }),
+      });
+    }
+  }
+
+  if (process.env.OPENROUTER_API_KEY) {
+    const openRouterModel =
+      process.env.OPENROUTER_MODEL ?? DEFAULT_OPENROUTER_MODEL;
+
+    providers.push({
+      provider: "OpenRouter",
+      model: openRouterModel,
+      run: () =>
+        analyzeFoodImageWithOpenRouter(imageUrl, { model: openRouterModel }),
+    });
+  }
+
+  return providers;
+}
+
+async function analyzeWithProviderFallback(imageUrl: string) {
+  const providers = getProviderAttempts(imageUrl);
+
+  if (providers.length === 0) {
+    throw new Error(
+      "No AI analysis provider is configured. Add GEMINI_API_KEY or OPENROUTER_API_KEY and redeploy.",
+    );
+  }
+
+  let lastError: unknown;
+
+  for (const provider of providers) {
+    try {
+      return await withRetry(provider.run, {
+        attempts: 2,
+        delayMs: 750,
+        shouldRetry: shouldRetryProvider,
+      });
+    } catch (error) {
+      lastError = error;
+
+      appLogger.warn("AI provider analysis failed; trying next provider", {
+        provider: provider.provider,
+        model: provider.model,
+        status: getErrorStatus(error),
+        code: getErrorCode(error),
+        errorProvider: getErrorProvider(error),
+        errorModel: getErrorModel(error),
+        errorMessage: getErrorMessage(error),
+      });
+
+      if (isImageFetchError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError ?? new Error("All AI analysis providers failed.");
 }
 
 export async function analyzeFoodImage(
@@ -98,30 +218,19 @@ export async function analyzeFoodImage(
       };
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return {
-        status: "error",
-        message: "Gemini is not configured. Add GEMINI_API_KEY in Vercel and redeploy.",
-      };
-    }
-
-    const geminiResult = await withRetry(
-      () => analyzeFoodImageWithGemini(parsedInput.data.imageUrl),
-      {
-        attempts: 2,
-        delayMs: 750,
-        shouldRetry: (error) => {
-          const status = getErrorStatus(error);
-          return status === 0 || status >= 500;
-        },
-      },
+    const providerResult = await analyzeWithProviderFallback(
+      parsedInput.data.imageUrl,
     );
 
     return {
       status: "success",
       message: "Food analysis completed.",
-      analysis: geminiResult.analysis,
-      rawResponse: geminiResult.rawResponse,
+      analysis: providerResult.analysis,
+      rawResponse: {
+        provider: providerResult.provider,
+        model: providerResult.model,
+        response: providerResult.rawResponse,
+      },
     };
   } catch (error) {
     appLogger.error("Food image analysis failed", error);

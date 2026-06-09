@@ -64,8 +64,8 @@ Phase 9 is complete.
 
 ## Phase 4 Notes
 
-- Added a server-only OpenAI client.
-- Added GPT-4o Vision analysis through the OpenAI Responses API.
+- Added a server-only AI analysis client.
+- Added structured vision analysis for food images.
 - Added strict Structured Outputs JSON schema for food nutrition analysis.
 - Added a robust prompt for multiple foods, partial visibility, unclear images, and low confidence cases.
 - Added server-side validation for OpenAI analysis output.
@@ -76,7 +76,7 @@ Phase 9 is complete.
 
 - `npm run lint` passed.
 - `npm run build` passed with placeholder Clerk, PostgreSQL, OpenAI, and Blob environment values.
-- Live OpenAI analysis was not executed because real `OPENAI_API_KEY`, Clerk, and Blob credentials are required.
+- Live AI analysis was not executed because real AI provider, Clerk, and Blob credentials are required.
 
 ## Phase 5 Notes
 
@@ -134,7 +134,7 @@ Phase 9 is complete.
 - Added in-memory rate limiting for upload, AI analysis, and meal mutation flows.
 - Added consistent JSON body parsing errors for API routes.
 - Added sanitized server action and API error responses.
-- Added retry logic for GPT-4o Vision analysis and client meal-save requests.
+- Added retry logic for AI vision analysis and client meal-save requests.
 - Added protected route error boundary with retry.
 - Added loading states for dashboard, upload, and analytics routes.
 - Added security headers through Next.js config.
@@ -188,7 +188,7 @@ All planned MVP phases are complete.
 - Added specific AI analysis error messages for exhausted quota, invalid keys, model access, image URL fetch failures, and transient API failures.
 - Added Gemini Vision analysis support through `GEMINI_API_KEY`.
 - Adjusted Gemini response schema conversion to remove unsupported JSON Schema keywords before calling the Gemini API.
-- Updated the default Gemini model to `gemini-2.0-flash` and added `GEMINI_MODEL` override support.
+- Updated the default Gemini model and added `GEMINI_MODEL` override support.
 - Removed OpenAI fallback from food image analysis; Gemini is now the only active analysis provider.
 - Removed legacy OpenAI analysis files, UI copy, env references, and the `openai` npm dependency so the app cannot fall back to OpenAI.
 - Verified the Gemini-only code with `npm run lint` and `npm run build`.
@@ -196,3 +196,7 @@ All planned MVP phases are complete.
 - Replaced the generic camera brand mark in the app header, landing page, and Clerk auth screens.
 - Removed the default Next.js favicon and wired metadata to the new NutriSnap SVG icon assets.
 - Verified the logo/favicon pass with `npm run lint` and `npm run build`.
+- Replaced the Gemini analysis default model with `gemini-2.5-flash-lite` and added `gemini-2.5-flash` as the Gemini fallback model.
+- Added optional OpenRouter vision fallback using `OPENROUTER_API_KEY` and `OPENROUTER_MODEL`.
+- Added provider-chain execution for food analysis so NutriSnap tries Gemini primary, Gemini fallback, then OpenRouter before showing an analysis error.
+- Updated setup and deployment documentation with the current Neon, Gemini, OpenRouter, and `NUTRISNAP_BLOB_READ_WRITE_TOKEN` environment variables.

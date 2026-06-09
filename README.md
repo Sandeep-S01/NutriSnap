@@ -9,7 +9,7 @@ NutriSnap is a production-ready MVP for AI-powered food image analysis and meal 
 - Tailwind CSS
 - Clerk authentication
 - PostgreSQL with Prisma
-- Google Gemini Vision
+- Google Gemini Vision with optional OpenRouter fallback
 - Vercel Blob storage
 - Vercel deployment
 
@@ -18,7 +18,7 @@ NutriSnap is a production-ready MVP for AI-powered food image analysis and meal 
 - Clerk sign up, sign in, user profile, and protected routes
 - Camera, gallery, and drag/drop image upload
 - Vercel Blob image storage with file type and size validation
-- Gemini food analysis with structured JSON output
+- Gemini food analysis with structured JSON output and provider fallback
 - Meal save, update, and delete APIs
 - Dashboard with today's totals and recent meals
 - Weekly/monthly analytics with nutrition trends and most eaten foods
@@ -58,3 +58,10 @@ Copy `.env.example` to `.env.local` for local development and configure the same
 - `GEMINI_API_KEY`
 - `NUTRISNAP_BLOB_READ_WRITE_TOKEN`
 - `NEXT_PUBLIC_APP_URL`
+
+## Optional AI Fallback Variables
+
+- `GEMINI_MODEL` defaults to `gemini-2.5-flash-lite`
+- `GEMINI_FALLBACK_MODEL` defaults to `gemini-2.5-flash`
+- `OPENROUTER_API_KEY` enables the OpenRouter fallback provider
+- `OPENROUTER_MODEL` defaults to `google/gemma-4-26b-a4b-it:free`
