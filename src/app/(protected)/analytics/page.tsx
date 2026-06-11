@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { ScanLine } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -11,11 +12,11 @@ import { roundNutritionValue } from "@/features/dashboard/dashboard-metrics";
 import { getMealsForDateRange } from "@/server/meals";
 
 const reportStats = [
-  { key: "calories", label: "Calories", unit: "kcal" },
-  { key: "protein", label: "Protein", unit: "g" },
-  { key: "carbs", label: "Carbs", unit: "g" },
-  { key: "fat", label: "Fat", unit: "g" },
-  { key: "fiber", label: "Fiber", unit: "g" },
+  { key: "calories", label: "Calories", unit: "kcal", className: "text-calories" },
+  { key: "protein", label: "Protein", unit: "g", className: "text-protein" },
+  { key: "carbs", label: "Carbs", unit: "g", className: "text-carbs" },
+  { key: "fat", label: "Fat", unit: "g", className: "text-fat" },
+  { key: "fiber", label: "Fiber", unit: "g", className: "text-fiber" },
 ] as const;
 
 export default async function AnalyticsPage() {
@@ -35,35 +36,36 @@ export default async function AnalyticsPage() {
   const monthlyReport = buildAnalyticsReport(monthlyMeals, 30);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 lg:px-10">
-      <section className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <main className="mx-auto w-full max-w-7xl px-5 py-6 sm:px-8 lg:px-8 lg:py-7">
+      <section className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-            Analytics
+          <p className="text-xs font-semibold uppercase text-primary">
+            Insights
           </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-normal text-slate-950 sm:text-4xl">
+          <h1 className="mt-2 text-[28px] font-semibold tracking-normal text-slate-950">
             Nutrition trends
           </h1>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Review weekly and monthly calorie, protein, and meal frequency
-            patterns from saved food analyses.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Compare recent intake patterns, meal frequency, and recurring foods
+            from your saved scans.
           </p>
         </div>
         <Link
           href="/upload"
-          className="inline-flex h-11 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
         >
-          Log another meal
+          <ScanLine className="mr-2 size-4" aria-hidden="true" />
+          Scan meal
         </Link>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <ReportSummary title="Weekly report" totals={weeklyReport.totals} />
-        <ReportSummary title="Monthly report" totals={monthlyReport.totals} />
+      <section className="grid gap-4 xl:grid-cols-2">
+        <ReportSummary title="7-day summary" days={7} totals={weeklyReport.totals} />
+        <ReportSummary title="30-day summary" days={30} totals={monthlyReport.totals} />
       </section>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-2">
-        <article className="rounded-lg border border-slate-200 bg-white p-5">
+      <section className="mt-4 grid gap-4 xl:grid-cols-2">
+        <article className="rounded-lg border border-border-subtle bg-surface p-4">
           <div className="mb-4">
             <h2 className="text-base font-semibold text-slate-950">
               7-day calories and protein
@@ -78,7 +80,7 @@ export default async function AnalyticsPage() {
           />
         </article>
 
-        <article className="rounded-lg border border-slate-200 bg-white p-5">
+        <article className="rounded-lg border border-border-subtle bg-surface p-4">
           <div className="mb-4">
             <h2 className="text-base font-semibold text-slate-950">
               30-day calories and protein
@@ -94,7 +96,7 @@ export default async function AnalyticsPage() {
         </article>
       </section>
 
-      <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+      <section className="mt-4 rounded-lg border border-border-subtle bg-surface p-4">
         <div className="mb-4">
           <h2 className="text-base font-semibold text-slate-950">
             Most eaten foods
@@ -111,19 +113,26 @@ export default async function AnalyticsPage() {
 
 function ReportSummary({
   title,
+  days,
   totals,
 }: {
   title: string;
+  days: number;
   totals: Record<(typeof reportStats)[number]["key"], number>;
 }) {
+  const dailyCalories = Math.round(totals.calories / days);
+
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="text-base font-semibold text-slate-950">{title}</h2>
+    <article className="rounded-lg border border-border-subtle bg-surface p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-base font-semibold text-slate-950">{title}</h2>
+        <p className="text-sm text-slate-600">{dailyCalories} kcal/day avg</p>
+      </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-5">
         {reportStats.map((stat) => (
-          <div key={stat.key} className="rounded-md bg-slate-50 p-3">
+          <div key={stat.key} className="rounded-md bg-surface-muted p-3">
             <p className="text-xs font-medium text-slate-500">{stat.label}</p>
-            <p className="mt-2 text-xl font-semibold text-slate-950">
+            <p className={["mt-2 text-xl font-semibold", stat.className].join(" ")}>
               {roundNutritionValue(totals[stat.key])}
               <span className="ml-1 text-xs font-medium text-slate-500">
                 {stat.unit}

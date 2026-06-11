@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { AppHeader } from "@/components/app-header";
+import { AppSidebar } from "@/components/app-sidebar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 export default async function ProtectedLayout({
@@ -15,9 +15,9 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-dvh bg-background pb-24 lg:pb-0">
-      <AppHeader />
-      {children}
+    <div className="min-h-dvh bg-background pb-24 lg:pb-0 lg:pl-64">
+      <AppSidebar />
+      <div className="min-h-dvh">{children}</div>
       <MobileBottomNav />
     </div>
   );

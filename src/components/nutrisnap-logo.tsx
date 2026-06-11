@@ -19,56 +19,55 @@ export function NutriSnapLogo({
         aria-label="NutriSnap"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <rect width="64" height="64" rx="16" fill="#047857" />
-        <rect
-          x="9"
-          y="9"
-          width="46"
-          height="46"
-          rx="13"
-          fill="#10B981"
+        <rect width="64" height="64" rx="16" fill="#F8FAFC" />
+        <path
+          d="M13 42V26.5C13 22.9 15.9 20 19.5 20H25.5L28.4 14.8C29.1 13.7 30.3 13 31.6 13H41.2C42.5 13 43.7 13.7 44.4 14.8L47.2 20H50C53.6 20 56.5 22.9 56.5 26.5V42"
+          stroke="#15803D"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
         <path
-          d="M19 24V18.5C19 17.1 20.1 16 21.5 16H27"
-          stroke="#ECFDF5"
+          d="M13 42V45.5C13 49.1 15.9 52 19.5 52H22"
+          stroke="#15803D"
           strokeWidth="4"
           strokeLinecap="round"
         />
         <path
-          d="M37 16H42.5C43.9 16 45 17.1 45 18.5V24"
-          stroke="#ECFDF5"
+          d="M47.5 52H50C53.6 52 56.5 49.1 56.5 45.5V42"
+          stroke="#15803D"
           strokeWidth="4"
           strokeLinecap="round"
         />
+        <circle cx="35" cy="36" r="16" fill="#F8FAFC" stroke="#15803D" strokeWidth="4" />
         <path
-          d="M45 40V45.5C45 46.9 43.9 48 42.5 48H37"
-          stroke="#ECFDF5"
-          strokeWidth="4"
+          d="M31.8 37.8C31.8 29.8 37.1 24 45.2 22.5C46.1 31 40.7 38 32.9 40.2"
+          fill="#22C55E"
+        />
+        <path
+          d="M24.5 47.2C25.2 40.4 30.7 35.1 37.4 34.2C38.2 41.3 33.7 47.2 26.4 49.2"
+          fill="#FB923C"
+        />
+        <path
+          d="M27.8 47.6L36.2 38.8"
+          stroke="#FFF7ED"
+          strokeWidth="2.4"
           strokeLinecap="round"
         />
         <path
-          d="M27 48H21.5C20.1 48 19 46.9 19 45.5V40"
-          stroke="#ECFDF5"
-          strokeWidth="4"
+          d="M34.8 45.8L30.8 42.4"
+          stroke="#FFF7ED"
+          strokeWidth="2.2"
           strokeLinecap="round"
         />
         <path
-          d="M19 38C22.2 43 26.9 45.5 32.7 45.5C39 45.5 44.3 42.2 47 36.8"
-          stroke="#ECFDF5"
-          strokeWidth="4"
+          d="M37 41.8L32.8 39"
+          stroke="#FFF7ED"
+          strokeWidth="2.2"
           strokeLinecap="round"
         />
-        <path
-          d="M28.5 35.5C28.5 28.4 34.1 22.5 42 20.5C43.2 28.2 38.9 35.5 31.8 37.4"
-          fill="#ECFDF5"
-        />
-        <path
-          d="M21.5 25.8C26.6 25.7 30.7 29.1 31.8 34.2C26.9 34.9 22.4 31.6 21.5 25.8Z"
-          fill="#A7F3D0"
-        />
-        <circle cx="28.5" cy="30.5" r="2" fill="#047857" />
-        <circle cx="34.5" cy="29" r="1.8" fill="#047857" />
-        <circle cx="32" cy="35" r="1.7" fill="#047857" />
+        <path d="M30 38.6C33 32.8 37 29.2 42.4 25.8" stroke="#F8FAFC" strokeWidth="2.3" strokeLinecap="round" />
+        <circle cx="51" cy="26" r="3" fill="#22C55E" />
       </svg>
       {showWordmark ? (
         <span className="text-base font-semibold tracking-normal text-slate-950">

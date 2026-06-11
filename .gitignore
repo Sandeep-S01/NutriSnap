@@ -31,6 +31,7 @@ yarn-error.log*
 .pnpm-debug.log*
 dev-server*.log
 nutrisnap-phone-screenshot.png
+.codex-screenshots/
 
 # env files (can opt-in for committing if needed)
 .env*

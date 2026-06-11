@@ -4,12 +4,14 @@ import { NextResponse } from "next/server";
 const isProtectedPageRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/upload(.*)",
+  "/meals(.*)",
   "/analytics(.*)",
   "/profile(.*)",
 ]);
 
 const isProtectedApiRoute = createRouteMatcher([
   "/api/meals(.*)",
+  "/api/preferences(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

@@ -23,14 +23,14 @@ export function AnalyticsTrendChart({
 
   if (!hasData) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-surface-muted p-6 text-center text-sm text-slate-500">
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="h-72 w-full">
+    <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -58,7 +58,7 @@ export function AnalyticsTrendChart({
             type="monotone"
             dataKey="calories"
             name="Calories"
-            stroke="#059669"
+            stroke="#d97706"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}

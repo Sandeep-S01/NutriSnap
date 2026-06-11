@@ -12,14 +12,14 @@ import type { ChartPoint } from "@/features/dashboard/dashboard-metrics";
 export function NutritionChart({ data }: { data: ChartPoint[] }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-surface-muted p-6 text-center text-sm text-slate-500">
         Charts will appear after meals are saved today.
       </div>
     );
   }
 
   return (
-    <div className="h-72 w-full">
+    <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -42,7 +42,7 @@ export function NutritionChart({ data }: { data: ChartPoint[] }) {
               boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
             }}
           />
-          <Bar dataKey="calories" name="Calories" fill="#059669" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="calories" name="Calories" fill="#d97706" radius={[4, 4, 0, 0]} />
           <Bar dataKey="protein" name="Protein (g)" fill="#2563eb" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
